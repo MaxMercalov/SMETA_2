@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Смета съёмок — прототип v7.1 (стильный Word-HTML экспорт)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root{
+    --bg:#0f172a; --card:#111827; --muted:#9ca3af; --line:#1f2937;
+    --brand:#7c3aed; --brand2:#ec4899; --text:#e5e7eb;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; padding:24px;
+    font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    background: radial-gradient(1200px 500px at 70% -10%, rgba(124,58,237,.25), transparent),
+               radial-gradient(800px 400px at 10% -10%, rgba(236,72,153,.18), transparent),
+               var(--bg);
+    color:var(--text);
+  }
+  h1{margin:0 0 16px; font-size:28px; font-weight:800;}
+  .wrap{max-width:1100px; margin:0 auto;}
+  .card{
+    background: linear-gradient(180deg, rgba(255,255,255,.02), rgba(0,0,0,.02)), var(--card);
+    border:1px solid var(--line);
+    border-radius:18px; padding:18px; margin-bottom:16px;
+    box-shadow: 0 10px 30px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.03);
+  }
+  .grid{display:grid; grid-template-columns: repeat(12, 1fr); gap:12px;}
+  label{font-size:12px; color:var(--muted); display:block; margin-bottom:6px;}
+  input[type="text"], input[type="number"], select, textarea{
+    width:100%; padding:12px 12px; border:1px solid var(--line); border-radius:12px;
+    background:#0b1220; color:var(--text); font-size:14px; outline:none;
+  }
+  textarea{min-height:90px; resize:vertical;}
+  select{appearance:none; background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+         background-position: calc(100% - 18px) calc(50% - 3px), calc(100% - 12px) calc(50% - 3px);
+         background-size:6px 6px, 6px 6px; background-repeat:no-repeat;}
+  .header-title{display:flex; align-items:center; justify-content:space-between;}
+  .badge{font-size:12px; color:white; padding:6px 10px; border-radius:999px;
+         background: linear-gradient(90deg, var(--brand), var(--brand2));}
+  .muted{color:var(--muted); font-size:12px;}
+  .cat-header{display:flex; align-items:center; justify-content:space-between; gap:8px;}
+  .cat-header h2{margin:0; font-size:18px;}
+  .btn{
+    appearance:none; border:1px solid transparent; background: linear-gradient(90deg, var(--brand), var(--brand2));
+    color:#fff; padding:10px 14px; border-radius:12px; cursor:pointer; font-weight:700;
+    box-shadow: 0 6px 16px rgba(124,58,237,.35);
+  }
+  .btn.ghost{background:#0b1220; border-color:#2b3447; color:#c7d2fe; box-shadow:none;}
+  .btn.danger{background:#3f1b1b; border-color:#7f1d1d; color:#fecaca; box-shadow:none;}
+  .btn.small{padding:8px 10px; font-size:12px;}
+  table{width:100%; border-collapse:separate; border-spacing:0; margin-top:10px; overflow:hidden; border-radius:14px; border:1px solid var(--line);}
+  th, td{padding:10px; text-align:center; font-size:14px; border-bottom:1px solid var(--line);}
+  th{background:#0b1220; color:#cbd5e1; font-weight:700;}
+  tr:last-child td{border-bottom:none;}
+  td[contenteditable="true"]{outline:none; background:#0b1220;}
+  .total{ text-align:right; margin-top:10px; font-weight:800;}
+  .kpis{display:flex; gap:12px; flex-wrap:wrap; margin-top:8px;}
+  .kpi{flex:1 1 180px; background:#0b1220; border:1px solid var(--line); border-radius:12px; padding:10px 12px;}
+  .kpi .label{color:var(--muted); font-size:12px;}
+  .kpi .value{font-size:20px; font-weight:800;}
+  .actions{display:flex; gap:10px; flex-wrap:wrap; margin-top:12px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card">
+    <div class="header-title">
+      <h1>Смета съёмок</h1>
+      <div class="badge">прототип v7.1</div>
+    </div>
+    <div class="grid">
+      <div style="grid-column: span 6;">
+        <label>Название проекта</label>
+        <input id="projectName" type="text" placeholder="Например: Реклама кофе «Утро»" oninput="updateTotals()">
+      </div>
+      <div style="grid-column: span 6;">
+        <label>Название сметы</label>
+        <input id="estimateName" type="text" placeholder="Например: Смета на съёмку и постпродакшн" oninput="updateTotals()">
+      </div>
+      <div style="grid-column: span 3;">
+        <label>Кол-во смен (для техники и людей)</label>
+        <input id="shifts" type="number" min="1" value="1" oninput="updateTotals()">
+      </div>
+      <div style="grid-column: span 3;">
+        <label>Скидка (% от подытога)</label>
+        <input id="discountPct" type="number" min="0" max="100" value="0" oninput="updateTotals()">
+      </div>
+      <div style="grid-column: span 6;">
+        <label>Примечания</label>
+        <textarea id="notes" placeholder="Условия аренды, логистика..." oninput="updateTotals()"></textarea>
+      </div>
+    </div>
+    <div class="actions">
+      <button class="btn ghost small" onclick="addAllDefaultRows()">Добавить по строке в каждую категорию</button>
+      <button class="btn" onclick="downloadWordHTML()">Скачать Word (HTML)</button>
+    </div>
+    <div class="muted" style="margin-top:8px">Смены применяются к: «Камеры», «Оптика», «Свет», «Звук», «Люди». Для «Постпродакшн» смены не учитываются.</div>
+  </div>
+
+  <div id="categories"></div>
+
+  <div class="card">
+    <div class="kpis">
+      <div class="kpi"><div class="label">Подытог (без скидки)</div><div id="subtotalKpi" class="value">0 ₽</div></div>
+      <div class="kpi"><div class="label">Скидка</div><div id="discountKpi" class="value">0 ₽</div></div>
+      <div class="kpi"><div class="label">Итого к оплате</div><div id="grandKpi" class="value">0 ₽</div></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const camerasList = [
+  "Sony ILME-FX3 body","Sony ILME-FX30 body","Sony Alpha 7C body","Sony A7 IV body","Sony A7 III body",
+  "Sony XDCAM","Canon 5D Mark IV body","GoPro Hero 11 Black","GoPro Hero 12 Black","Другое…"
+];
+const opticsList = [
+  "Sony FE 2.8/24-70 GM II","Sony FE 2.8/70-200 GM OSS II","Sony FE 28-60 f/4-5.6","Tamron 11-20 f/2.8","Tamron 17-28 F/2.8",
+  "Tamron 28-75mm f/2.8 Di III","Tamron 70-180mm f/2.8","Sirui 50 F1.8 1.33x","Canon EF 70-200 1:2.8","Canon EF 75-300mm 1:4-5.6 II",
+  "CANON EF 24-70mm 1:2.8","Другое…"
+];
+const categoriesConf = [
+  { name: "Камеры", shiftBased: true, type: "cameras" },
+  { name: "Оптика", shiftBased: true, type: "optics" },
+  { name: "Свет", shiftBased: true, type: "generic" },
+  { name: "Звук", shiftBased: true, type: "generic" },
+  { name: "Люди", shiftBased: true, type: "generic" },
+  { name: "Постпродакшн", shiftBased: false, type: "generic" }
+];
+function currency(n){ return (Number(n)||0).toLocaleString('ru-RU') + " ₽"; }
+function createSelect(options){ const s=document.createElement('select'); options.forEach(op=>{const o=document.createElement('option'); o.value=op;o.textContent=op;s.appendChild(o);}); return s; }
+function createNameCell(type){
+  const td=document.createElement('td');
+  const make = (list, placeholder)=>{
+    const sel=createSelect(list);
+    const input=document.createElement('input'); input.type='text'; input.placeholder=placeholder; input.style="display:none;margin-top:6px;";
+    sel.addEventListener('change', ()=>{ input.style.display = (sel.value==="Другое…") ? 'block' : 'none'; updateTotals(); });
+    input.addEventListener('input', updateTotals);
+    td.appendChild(sel); td.appendChild(input);
+  };
+  if(type==="cameras") make(camerasList,'Своя камера');
+  else if(type==="optics") make(opticsList,'Другая оптика');
+  else { td.contentEditable="true"; td.textContent="Новая позиция"; td.addEventListener('input', updateTotals); }
+  return td;
+}
+function getNameFromCell(td){
+  const sel=td.querySelector('select');
+  if(sel){ if(sel.value==="Другое…"){ const input=td.querySelector('input'); return (input && input.value.trim())?input.value.trim():"Другое"; } return sel.value; }
+  return td.textContent.trim();
+}
+function createCategory(conf){
+  const card=document.createElement('div'); card.className='card';
+  const priceHeader=conf.shiftBased?"Цена за смену (₽)":"Цена (₽)";
+  const sumNote=conf.shiftBased?"Цена × Кол-во × Смены":"Цена × Кол-во";
+  card.innerHTML=`
+    <div class="cat-header">
+      <h2>${conf.name}</h2>
+      <div><button class="btn ghost small" onclick="addRow(this)">+ Добавить позицию</button></div>
+    </div>
+    <table>
+      <thead><tr>
+        <th style="width:46%;">Название</th>
+        <th style="width:18%;">${priceHeader}</th>
+        <th style="width:12%;">Кол-во</th>
+        <th style="width:14%;">Сумма <span class="muted">(${sumNote})</span></th>
+        <th style="width:10%;"></th>
+      </tr></thead>
+      <tbody></tbody>
+    </table>
+    <div class="total">Итого (${conf.name}): <span>0</span></div>`;
+  card.dataset.shiftBased=conf.shiftBased?"1":"0"; card.dataset.type=conf.type;
+  document.getElementById('categories').appendChild(card);
+}
+function addRow(btn){
+  const card=btn.closest('.card'); const tbody=card.querySelector('tbody'); const type=card.dataset.type;
+  const tr=document.createElement('tr');
+  const nameTd=createNameCell(type==='cameras'?'cameras':(type==='optics'?'optics':'generic'));
+  const priceTd=document.createElement('td'); priceTd.contentEditable="true"; priceTd.textContent="0"; priceTd.addEventListener('input', updateTotals);
+  const qtyTd=document.createElement('td'); qtyTd.contentEditable="true"; qtyTd.textContent="1"; qtyTd.addEventListener('input', updateTotals);
+  const sumTd=document.createElement('td'); sumTd.textContent="0";
+  const delTd=document.createElement('td'); const delBtn=document.createElement('button'); delBtn.className='btn danger small'; delBtn.textContent='Удалить'; delBtn.onclick=()=>{ tr.remove(); updateTotals(); }; delTd.appendChild(delBtn);
+  tr.appendChild(nameTd); tr.appendChild(priceTd); tr.appendChild(qtyTd); tr.appendChild(sumTd); tr.appendChild(delTd);
+  tbody.appendChild(tr); updateTotals();
+}
+function addAllDefaultRows(){ document.querySelectorAll(".cat-header .btn.small").forEach(b=>addRow(b)); }
+function getNumberFromCellTd(td){ const raw=(td.innerText||td.textContent||"").replace(/[^\d,. -]/g,'').replace(',', '.'); const num=parseFloat(raw); return isNaN(num)?0:num; }
+function updateTotals(){
+  const shifts=parseFloat(document.getElementById('shifts').value)||0; let subtotal=0;
+  document.querySelectorAll('#categories > .card').forEach(card=>{
+    const shiftBased=card.dataset.shiftBased==="1"; let catTotal=0;
+    card.querySelectorAll('tbody tr').forEach(tr=>{
+      const price=getNumberFromCellTd(tr.cells[1]); const qty=getNumberFromCellTd(tr.cells[2]);
+      let sum=price*qty; if(shiftBased) sum*=shifts; tr.cells[3].textContent=isFinite(sum)?sum.toFixed(2):"0"; catTotal+=isFinite(sum)?sum:0;
+    });
+    card.querySelector('.total span').textContent=currency(catTotal); subtotal+=catTotal;
+  });
+  const discountPct=Math.min(100, Math.max(0, parseFloat(document.getElementById('discountPct').value)||0));
+  const discount=subtotal*discountPct/100; const grand=Math.max(0, subtotal-discount);
+  document.getElementById('subtotalKpi').textContent=currency(subtotal);
+  document.getElementById('discountKpi').textContent=currency(discount);
+  document.getElementById('grandKpi').textContent=currency(grand);
+}
+function buildWordHTML(){
+  // restrained, clean style for Word
+  const css = `
+  <meta charset="UTF-8">
+  <style>
+    :root{ --ink:#1f2937; --muted:#6b7280; --line:#e5e7eb; --chip:#f3f4f6; --head:#0f172a; --accent:#7c3aed; }
+    body{ font-family: Arial, Helvetica, sans-serif; color:var(--ink); margin:28px; }
+    h1{ font-size:22px; margin:0 0 8px; }
+    h2{ font-size:14px; margin:16px 0 8px; padding:6px 10px; display:inline-block; background:var(--chip); border-radius:10px; color:#111; }
+    .meta{ color:var(--muted); font-size:12px; }
+    .hr{ height:1px; background:var(--line); margin:12px 0; }
+    table{ width:100%; border-collapse:separate; border-spacing:0; margin:6px 0; table-layout:fixed; }
+    col.name{ width:46%; } col.price{ width:18%; } col.qty{ width:12%; } col.sum{ width:14%; }
+    th, td{ border:1px solid var(--line); padding:8px 10px; font-size:12px; }
+    th{ background:#fafafa; color:#111; text-align:left; }
+    td.price, td.qty, td.sum{ text-align:right; font-variant-numeric: tabular-nums; }
+    .total{ text-align:right; margin:8px 0 14px; font-weight:bold; }
+    .totals{ margin-top:10px; }
+    .totals .row{ display:flex; justify-content:flex-end; gap:18px; }
+    .totals .label{ color:var(--muted); }
+    .totals .value{ min-width:140px; text-align:right; font-weight:bold; }
+    .brand{ color:var(--accent); font-weight:bold; }
+  </style>`;
+
+  const project = document.getElementById('projectName').value || 'Без названия';
+  const estimate = document.getElementById('estimateName').value || 'Смета';
+  const shifts = document.getElementById('shifts').value || '1';
+  const subtotal = document.getElementById('subtotalKpi').textContent;
+  const discount = document.getElementById('discountKpi').textContent;
+  const grand = document.getElementById('grandKpi').textContent;
+  const discountPct = document.getElementById('discountPct').value || 0;
+  const notes = document.getElementById('notes').value || '';
+
+  let html = `<html><head>${css}</head><body>`;
+  html += `<h1>${estimate}</h1>`;
+  html += `<div class="meta">Проект: <span class="brand">${project}</span></div>`;
+  html += `<div class="meta">Смены (для техники и людей): ${shifts}</div>`;
+  html += `<div class="hr"></div>`;
+
+  document.querySelectorAll('#categories > .card').forEach(card=>{
+    const catName = card.querySelector('.cat-header h2').textContent;
+    const rows = [];
+    card.querySelectorAll('tbody tr').forEach(tr=>{
+      rows.push({
+        name: (function(td){ const sel=td.querySelector('select'); if(sel){ if(sel.value==="Другое…"){ const input=td.querySelector('input'); return (input&&input.value.trim())?input.value.trim():"Другое"; } return sel.value; } return td.textContent.trim(); })(tr.cells[0]),
+        price: tr.cells[1].innerText.trim(),
+        qty: tr.cells[2].innerText.trim(),
+        sum: tr.cells[3].innerText.trim()
+      });
+    });
+    if(!rows.length) return;
+    html += `<h2>${catName}</h2>`;
+    html += `<table><colgroup><col class="name"><col class="price"><col class="qty"><col class="sum"></colgroup>`;
+    html += `<thead><tr><th>Название</th><th>Цена</th><th>Кол-во</th><th>Сумма</th></tr></thead><tbody>`;
+    rows.forEach(r=>{
+      const sumFmt = (Number(r.sum)||0).toLocaleString('ru-RU') + ' ₽';
+      html += `<tr><td>${r.name||'—'}</td><td class="price">${r.price}</td><td class="qty">${r.qty}</td><td class="sum">${sumFmt}</td></tr>`;
+    });
+    html += `</tbody></table>`;
+    const catTotal = card.querySelector('.total span').textContent;
+    html += `<div class="total">Итого (${catName}): ${catTotal}</div>`;
+  });
+
+  html += `<div class="hr"></div>`;
+  html += `<div class="totals">`;
+  html += `<div class="row"><div class="label">Подытог:</div><div class="value">${subtotal}</div></div>`;
+  html += `<div class="row"><div class="label">Скидка (${discountPct}%):</div><div class="value">${discount}</div></div>`;
+  html += `<div class="row"><div class="label">Итого к оплате:</div><div class="value">${grand}</div></div>`;
+  html += `</div>`;
+
+  if(notes){
+    html += `<div class="hr"></div><h2>Примечания</h2><div>${notes.replace(/\\n/g,'<br>')}</div>`;
+  }
+  html += `</body></html>`;
+  return html;
+}
+function downloadWordHTML(){
+  updateTotals();
+  const html = buildWordHTML();
+  const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+  const a = document.createElement('a');
+  const name = (document.getElementById('estimateName').value || 'smeta') + ".html";
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 0);
+}
+// init
+categoriesConf.forEach(createCategory);
+updateTotals();
+</script>
+</body>
+</html>
